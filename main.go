@@ -5,9 +5,28 @@ import (
 	"os"
 )
 
-var LEGAL_CHARS = []byte{'>', '<', '+', '-', '.', ',', '[', ']'}
+const (
+	MEMORY_SIZE     = 300000
+	PTR_MOVE_RIGHT  = '>'
+	PTR_MOVE_LEFT   = '<'
+	INCR_MEM_CELL   = '+'
+	DECR_MEM_CELL   = '-'
+	OUTPUT_MEM_CELL = '.'
+	INPUT_MEM_CELL  = ','
+	LOOP_OPEN       = '['
+	LOOP_CLOSE      = ']'
+)
 
-const MEMORY_SIZE = 300000
+var LEGAL_CHARS = []byte{
+	PTR_MOVE_RIGHT,
+	PTR_MOVE_LEFT,
+	INCR_MEM_CELL,
+	DECR_MEM_CELL,
+	OUTPUT_MEM_CELL,
+	INPUT_MEM_CELL,
+	LOOP_OPEN,
+	LOOP_CLOSE,
+}
 
 func isLegal(b byte) bool {
 	for c := range LEGAL_CHARS {
@@ -39,7 +58,5 @@ func main() {
 		panic(err)
 	}
 
-	bfcode = preprocess(bfcode)
-
-	fmt.Println(string(bfcode))
+	fmt.Println(string(preprocess(bfcode)))
 }
