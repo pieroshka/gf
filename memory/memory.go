@@ -1,9 +1,7 @@
 package memory
 
-type MEMORY []byte
-
 var (
-	memory     MEMORY
+	memory     []byte
 	memorySize uint
 	pointer    uint
 )
