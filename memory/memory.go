@@ -1,40 +1,56 @@
 package memory
 
+type memoryDLL struct {
+	head *memoryNode
+	tail *memoryNode
+}
+
+type memoryNode struct {
+	prev *memoryNode
+	next *memoryNode
+
+	data byte
+}
+
 var (
-	memory     []byte
-	memorySize uint
-	pointer    uint
+	memory  memoryDLL
+	pointer *memoryNode
 )
 
-func Init(size uint) {
-	memorySize = size
-	memory = make([]byte, size)
+func Init() {
+	indexZero := memoryNode{}
+	memory = memoryDLL{head: &indexZero, tail: &indexZero}
+	pointer = memory.head
 }
 
 func PointerMoveLeft() {
-	pointer = (pointer + memorySize - 1) % memorySize
+	if pointer.prev == nil {
+		pointer.prev = &memoryNode{next: pointer}
+		memory.head = pointer.prev
+	}
+	pointer = pointer.prev
 }
 
 func PointerMoveRight() {
-	pointer = (pointer + memorySize + 1) % memorySize
-}
-
-func GetPointer() uint {
-	return pointer
+	if pointer.next == nil {
+		pointer.next = &memoryNode{prev: pointer}
+		memory.tail = pointer.next
+	}
+	pointer = pointer.next
 }
 
 func Get() byte {
-	return memory[pointer]
+	return pointer.data
 }
 
 func Set(value byte) {
-	memory[pointer] = value
-}
-
-func Incr() {
-	memory[pointer]++
+	pointer.data = value
 }
 
 func Decr() {
-	memory[pointer]--
+	pointer.data--
+}
+
+func Incr() {
+	pointer.data++
 }

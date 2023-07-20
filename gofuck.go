@@ -160,13 +160,12 @@ func main() {
 		panic(err)
 	}
 
-	memory.Init(MEMORY_SIZE)
-
 	bfcode = lexical(bfcode)
 	i, ok := syntactical(bfcode)
 	if !ok {
 		log.Fatalln("syntax error at position:", i)
 	}
 
+	memory.Init()
 	interpret(bfcode)
 }
