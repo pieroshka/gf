@@ -19,8 +19,7 @@ const (
 )
 
 var (
-	MEMORY_SIZE uint = 4096
-	TOKENS           = []byte{
+	TOKENS = []byte{
 		PTR_MOVE_RIGHT,
 		PTR_MOVE_LEFT,
 		INCR_MEM_CELL,
