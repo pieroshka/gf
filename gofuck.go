@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"gofuck/memory"
+	"log"
 	"os"
 )
 
@@ -17,8 +19,8 @@ const (
 )
 
 var (
-	MEMORY_SIZE uint64
-	LEGAL_CHARS = []byte{
+	MEMORY_SIZE uint = 4096
+	TOKENS           = []byte{
 		PTR_MOVE_RIGHT,
 		PTR_MOVE_LEFT,
 		INCR_MEM_CELL,
@@ -31,8 +33,8 @@ var (
 )
 
 func isToken(b byte) bool {
-	for i := range LEGAL_CHARS {
-		if b == LEGAL_CHARS[i] {
+	for i := range TOKENS {
+		if b == TOKENS[i] {
 			return true
 		}
 	}
@@ -67,27 +69,82 @@ func syntactical(bfcode []byte) (int, bool) {
 		}
 	}
 
-	if len(stack) != 0 {
-		return len(bfcode) - 1, false
-	}
-
-	return -1, true
+	return len(bfcode), len(stack) == 0
 }
 
-func countMemoryNeededNaive(bfcode []byte) uint {
-	var min, max int
-	for i := range bfcode {
-		switch bfcode[i] {
-		case PTR_MOVE_LEFT:
-			min--
-		case PTR_MOVE_RIGHT:
-			max++
-		default:
-			continue
+func getCorrespondingClosingBracketIdx(idx uint, bfcode []byte) uint {
+	counter := 1
+	for i := idx + 1; i < uint(len(bfcode)); i++ {
+		if bfcode[i] == BRACKET_OPEN {
+			counter++
+		}
+
+		if bfcode[i] == BRACKET_CLOSE {
+			counter--
+			if counter == 0 {
+				return i
+			}
 		}
 	}
-	fmt.Println("min:", min, "max:", max)
-	return uint(max - min)
+	return 404 // should never occur for a file that passed the syntactical analysis
+}
+
+func getCorrespondingOpeningBracketIdx(idx uint, bfcode []byte) uint {
+	counter := 1
+	for i := idx - 1; i > 0; i-- {
+		if bfcode[i] == BRACKET_CLOSE {
+			counter++
+		}
+
+		if bfcode[i] == BRACKET_OPEN {
+			counter--
+			if counter == 0 {
+				return i
+			}
+		}
+	}
+	return 404 // should never occur for a file that passed the syntactical analysis
+}
+
+func interpret(bfcode []byte) {
+	var i uint
+
+	for i = 0; i < uint(len(bfcode)); i++ {
+		switch c := bfcode[i]; c {
+		case PTR_MOVE_LEFT:
+			memory.PointerMoveLeft()
+
+		case PTR_MOVE_RIGHT:
+			memory.PointerMoveRight()
+
+		case INCR_MEM_CELL:
+			memory.Incr()
+
+		case DECR_MEM_CELL:
+			memory.Decr()
+
+		case OUTPUT_MEM_CELL:
+			fmt.Printf("%c", memory.Get())
+
+		case INPUT_MEM_CELL:
+			var temp memory.MEMORY_TYPE
+			fmt.Scan(&temp)
+			memory.Set(memory.MEMORY_TYPE(temp))
+
+		case BRACKET_OPEN:
+			if memory.Get() == 0 {
+				i = getCorrespondingClosingBracketIdx(i, bfcode)
+			}
+
+		case BRACKET_CLOSE:
+			if memory.Get() != 0 {
+				i = getCorrespondingOpeningBracketIdx(i, bfcode) - 1
+			}
+
+		default: // should never occur
+			log.Fatalln("illegal token at position:", i)
+		}
+	}
 }
 
 func main() {
@@ -96,7 +153,13 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(string(lexical(bfcode)))
-	fmt.Println(syntactical(bfcode))
-	fmt.Println(countMemoryNeededNaive(bfcode))
+	memory.Init(MEMORY_SIZE)
+
+	bfcode = lexical(bfcode)
+	i, ok := syntactical(bfcode)
+	if !ok {
+		log.Fatalln("syntax error at position:", i)
+	}
+
+	interpret(bfcode)
 }
