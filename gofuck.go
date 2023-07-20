@@ -72,12 +72,12 @@ func syntactical(bfcode []byte) (int, bool) {
 	return len(bfcode), len(stack) == 0
 }
 
-func getCorrespondingClosingBracketIdx(idx uint, bfcode []byte) uint {
-	if idx == uint(len(bfcode)-1) {
+func getCorrespondingClosingBracketIdx(idx uint64, bfcode []byte) uint64 {
+	if idx == uint64(len(bfcode)-1) {
 		return 0 // should never happen
 	}
 	counter := 1
-	for i := idx + 1; i < uint(len(bfcode)); i++ {
+	for i := idx + 1; i < uint64(len(bfcode)); i++ {
 		if bfcode[i] == BRACKET_OPEN {
 			counter++
 		}
@@ -92,7 +92,7 @@ func getCorrespondingClosingBracketIdx(idx uint, bfcode []byte) uint {
 	return 404 // should never occur for a file that passed the syntactical analysis
 }
 
-func getCorrespondingOpeningBracketIdx(idx uint, bfcode []byte) uint {
+func getCorrespondingOpeningBracketIdx(idx uint64, bfcode []byte) uint64 {
 	if idx == 0 {
 		return 0 // should never happen
 	}
@@ -114,9 +114,7 @@ func getCorrespondingOpeningBracketIdx(idx uint, bfcode []byte) uint {
 }
 
 func interpret(bfcode []byte) {
-	var i uint
-
-	for i = 0; i < uint(len(bfcode)); i++ {
+	for i := uint64(0); i < uint64(len(bfcode)); i++ {
 		switch c := bfcode[i]; c {
 		case PTR_MOVE_LEFT:
 			memory.PointerMoveLeft()
@@ -147,9 +145,6 @@ func interpret(bfcode []byte) {
 			if memory.Get() != 0 {
 				i = getCorrespondingOpeningBracketIdx(i, bfcode) - 1
 			}
-
-		default: // should never occur
-			log.Fatalln("illegal token at position:", i)
 		}
 	}
 }
@@ -166,6 +161,5 @@ func main() {
 		log.Fatalln("syntax error at position:", i)
 	}
 
-	memory.Init()
 	interpret(bfcode)
 }

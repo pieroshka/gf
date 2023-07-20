@@ -7,14 +7,7 @@ type memoryNode struct {
 	data byte
 }
 
-var (
-	pointer *memoryNode
-)
-
-func Init() {
-	indexZero := memoryNode{}
-	pointer = &indexZero
-}
+var pointer = &memoryNode{}
 
 func PointerMoveLeft() {
 	if pointer.prev == nil {
