@@ -155,7 +155,7 @@ func interpret(bfcode []byte) {
 }
 
 func main() {
-	bfcode, err := os.ReadFile("demo/main.bf")
+	bfcode, err := os.ReadFile("./input.bf")
 	if err != nil {
 		panic(err)
 	}
