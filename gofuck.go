@@ -73,6 +73,9 @@ func syntactical(bfcode []byte) (int, bool) {
 }
 
 func getCorrespondingClosingBracketIdx(idx uint, bfcode []byte) uint {
+	if idx == uint(len(bfcode)-1) {
+		return 0 // should never happen
+	}
 	counter := 1
 	for i := idx + 1; i < uint(len(bfcode)); i++ {
 		if bfcode[i] == BRACKET_OPEN {
@@ -90,6 +93,10 @@ func getCorrespondingClosingBracketIdx(idx uint, bfcode []byte) uint {
 }
 
 func getCorrespondingOpeningBracketIdx(idx uint, bfcode []byte) uint {
+	if idx == 0 {
+		return 0 // should never happen
+	}
+
 	counter := 1
 	for i := idx - 1; i > 0; i-- {
 		if bfcode[i] == BRACKET_CLOSE {
@@ -103,7 +110,7 @@ func getCorrespondingOpeningBracketIdx(idx uint, bfcode []byte) uint {
 			}
 		}
 	}
-	return 404 // should never occur for a file that passed the syntactical analysis
+	return 0 // should never occur for a file that passed the syntactical analysis
 }
 
 func interpret(bfcode []byte) {
@@ -127,9 +134,9 @@ func interpret(bfcode []byte) {
 			fmt.Printf("%c", memory.Get())
 
 		case INPUT_MEM_CELL:
-			var temp memory.MEMORY_TYPE
-			fmt.Scan(&temp)
-			memory.Set(memory.MEMORY_TYPE(temp))
+			var temp byte
+			fmt.Scanf("%c", &temp)
+			memory.Set(temp)
 
 		case BRACKET_OPEN:
 			if memory.Get() == 0 {
