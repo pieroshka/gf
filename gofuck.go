@@ -1,33 +1,45 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"gofuck/memory"
 	"log"
 	"os"
+	"strings"
+
+	"github.com/dave/jennifer/jen"
 )
 
-const (
-	PTR_MOVE_RIGHT  = '>'
-	PTR_MOVE_LEFT   = '<'
-	INCR_MEM_CELL   = '+'
-	DECR_MEM_CELL   = '-'
-	OUTPUT_MEM_CELL = '.'
-	INPUT_MEM_CELL  = ','
-	BRACKET_OPEN    = '['
-	BRACKET_CLOSE   = ']'
-)
+var Token = struct {
+	PtrMoveLeft   byte
+	PtrMoveRight  byte
+	IncrMemCell   byte
+	DecrMemCell   byte
+	OutputMemCell byte
+	InputMemCell  byte
+	BracketOpen   byte
+	BracketClose  byte
+}{
+	PtrMoveLeft:   '<',
+	PtrMoveRight:  '>',
+	IncrMemCell:   '+',
+	DecrMemCell:   '-',
+	OutputMemCell: '.',
+	InputMemCell:  ',',
+	BracketOpen:   '[',
+	BracketClose:  ']',
+}
 
 var (
 	TOKENS = []byte{
-		PTR_MOVE_RIGHT,
-		PTR_MOVE_LEFT,
-		INCR_MEM_CELL,
-		DECR_MEM_CELL,
-		OUTPUT_MEM_CELL,
-		INPUT_MEM_CELL,
-		BRACKET_OPEN,
-		BRACKET_CLOSE,
+		Token.PtrMoveLeft,
+		Token.PtrMoveRight,
+		Token.IncrMemCell,
+		Token.DecrMemCell,
+		Token.OutputMemCell,
+		Token.InputMemCell,
+		Token.BracketOpen,
+		Token.BracketClose,
 	}
 )
 
@@ -47,20 +59,19 @@ func lexical(bfcode []byte) []byte {
 			out = append(out, bfcode[i])
 		}
 	}
-
 	return out
 }
 
 func syntactical(bfcode []byte) (int, bool) {
-	var stack []rune
+	var stack []byte
 
 	for i := range bfcode {
-		if bfcode[i] == BRACKET_OPEN {
-			stack = append(stack, BRACKET_OPEN)
+		if bfcode[i] == Token.BracketOpen {
+			stack = append(stack, Token.BracketOpen)
 		}
 
-		if bfcode[i] == BRACKET_CLOSE {
-			if len(stack) < 1 || stack[len(stack)-1] != BRACKET_OPEN {
+		if bfcode[i] == Token.BracketClose {
+			if len(stack) < 1 || stack[len(stack)-1] != Token.BracketOpen {
 				return i, false
 			}
 
@@ -71,94 +82,100 @@ func syntactical(bfcode []byte) (int, bool) {
 	return len(bfcode), len(stack) == 0
 }
 
-func getCorrespondingClosingBracketIdx(idx uint64, bfcode []byte) uint64 {
-	if idx == uint64(len(bfcode)-1) {
-		return 0 // should never happen
-	}
-	counter := 1
-	for i := idx + 1; i < uint64(len(bfcode)); i++ {
-		if bfcode[i] == BRACKET_OPEN {
-			counter++
-		}
+type executable struct{}
 
-		if bfcode[i] == BRACKET_CLOSE {
-			counter--
-			if counter == 0 {
-				return i
-			}
+func translateBFRec(source []byte, ptr *int) []jen.Code {
+	statements := []jen.Code{}
+
+loop:
+	for ; *ptr < len(source); *ptr++ {
+		switch source[*ptr] {
+		case Token.PtrMoveLeft:
+			statements = append(statements, jen.Id("pointer").Op("--").Comment(string(source[*ptr])))
+		case Token.PtrMoveRight:
+			statements = append(statements, jen.Id("pointer").Op("++").Comment(string(source[*ptr])))
+		case Token.IncrMemCell:
+			statements = append(statements, jen.Id("memory").Index(jen.Id("pointer")).Op("++").Comment(string(source[*ptr])))
+		case Token.DecrMemCell:
+			statements = append(statements, jen.Id("memory").Index(jen.Id("pointer")).Op("--").Comment(string(source[*ptr])))
+		case Token.OutputMemCell:
+			statements = append(statements, jen.Qual("fmt", "Printf").Call(jen.Lit("%c"), jen.Id("memory").Index(jen.Id("pointer"))).Comment(string(source[*ptr])))
+		case Token.InputMemCell:
+			statements = append(statements, jen.Id("reader").Op("=").Qual("bufio", "NewReader").Call(jen.Qual("os", "Stdin")).Comment(string(source[*ptr])))
+			statements = append(statements, jen.List(jen.Id("c"), jen.Id("_"), jen.Id("err").Op("=").Id("reader").Dot("ReadRune").Call()))
+			statements = append(statements, jen.If(jen.Id("err").Op("!=").Nil().Block(
+				jen.Panic(jen.Id("err")),
+			)))
+			statements = append(statements, jen.Id("memory").Index(jen.Id("pointer")).Op("=").Int().Parens(jen.Id("c")))
+		case Token.BracketOpen:
+			*ptr++
+			statements = append(statements, jen.For((jen.Id("memory").Index(jen.Id("pointer")).Op("!=").Lit(0)).Block(translateBFRec(source, ptr)...).Comment("]")))
+		case Token.BracketClose:
+			break loop
 		}
 	}
-	return 404 // should never occur for a file that passed the syntactical analysis
+
+	return statements
 }
 
-func getCorrespondingOpeningBracketIdx(idx uint64, bfcode []byte) uint64 {
-	if idx == 0 {
-		return 0 // should never happen
-	}
-
-	counter := 1
-	for i := idx - 1; i > 0; i-- {
-		if bfcode[i] == BRACKET_CLOSE {
-			counter++
-		}
-
-		if bfcode[i] == BRACKET_OPEN {
-			counter--
-			if counter == 0 {
-				return i
-			}
-		}
-	}
-	return 0 // should never occur for a file that passed the syntactical analysis
+func translateBF(source []byte) []jen.Code {
+	ptr := 0
+	return translateBFRec(source, &ptr)
 }
 
-func interpret(bfcode []byte) {
-	for i := uint64(0); i < uint64(len(bfcode)); i++ {
-		switch c := bfcode[i]; c {
-		case PTR_MOVE_LEFT:
-			memory.PointerMoveLeft()
-
-		case PTR_MOVE_RIGHT:
-			memory.PointerMoveRight()
-
-		case INCR_MEM_CELL:
-			memory.Incr()
-
-		case DECR_MEM_CELL:
-			memory.Decr()
-
-		case OUTPUT_MEM_CELL:
-			fmt.Printf("%c", memory.Get())
-
-		case INPUT_MEM_CELL:
-			var temp byte
-			fmt.Scanf("%c", &temp)
-			memory.Set(temp)
-
-		case BRACKET_OPEN:
-			if memory.Get() == 0 {
-				i = getCorrespondingClosingBracketIdx(i, bfcode)
-			}
-
-		case BRACKET_CLOSE:
-			if memory.Get() != 0 {
-				i = getCorrespondingOpeningBracketIdx(i, bfcode) - 1
-			}
-		}
+func compile(source []byte) (*executable, error) {
+	f := jen.NewFile("main")
+	statements := []jen.Code{
+		jen.Id("memory").Op(":=").Make(jen.Index().Int(), jen.Lit(30000)),
+		jen.Var().Id("pointer").Int(),
 	}
+
+	if strings.Contains(string(source), ",") {
+		// otherwise those vars are unused
+		statements = append(statements,
+			jen.Var().Id("reader").Op("*").Qual("bufio", "Reader"),
+			jen.Var().Id("c").Rune(),
+			jen.Var().Id("err").Error(),
+		)
+	}
+
+	statements = append(statements, jen.Empty())
+	statements = append(statements, translateBF(source)...)
+	f.Func().Id("main").Params().Block(statements...)
+
+	buf := new(bytes.Buffer)
+	err := f.Render(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.MkdirAll("out/", 0755)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.WriteFile("out/main.go", buf.Bytes(), 0755)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(buf.String())
+	return new(executable), nil
 }
 
 func main() {
-	bfcode, err := os.ReadFile("./input.bf")
-	if err != nil {
-		panic(err)
-	}
-
+	bfcode := []byte("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.") // hello world
+	// bfcode := []byte("+[[->]-[-<]>-]>.>>>>.<<<<-.>>-.>.<<.>>>>-.<<<<<++.>>++.")
+	// bfcode := []byte(",.,.,.")
+	// bfcode := []byte("+[++[+++]++++]+++++")
 	bfcode = lexical(bfcode)
 	i, ok := syntactical(bfcode)
 	if !ok {
 		log.Fatalln("syntax error at position:", i)
 	}
 
-	interpret(bfcode)
+	_, err := compile(bfcode)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
