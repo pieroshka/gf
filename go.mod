@@ -1,4 +1,4 @@
-module github.com/pieroshka/gofuck
+module github.com/pieroshka/gf
 
 go 1.24.2
 

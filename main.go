@@ -89,19 +89,32 @@ func translateBFRec(source []byte, ptr *int) []jen.Code {
 
 loop:
 	for ; *ptr < len(source); *ptr++ {
+		consecutive := 1
+		for *ptr < len(source)-1 &&
+			source[*ptr] == source[*ptr+1] &&
+			(source[*ptr] == Token.PtrMoveLeft ||
+				source[*ptr] == Token.PtrMoveRight ||
+				source[*ptr] == Token.IncrMemCell ||
+				source[*ptr] == Token.DecrMemCell) {
+			consecutive++
+			*ptr++
+		}
+
+		comment := strings.Repeat(string(source[*ptr]), consecutive)
+
 		switch source[*ptr] {
 		case Token.PtrMoveLeft:
-			statements = append(statements, jen.Id("pointer").Op("--").Comment(string(source[*ptr])))
+			statements = append(statements, jen.Id("pointer").Op("-=").Lit(consecutive).Comment(comment))
 		case Token.PtrMoveRight:
-			statements = append(statements, jen.Id("pointer").Op("++").Comment(string(source[*ptr])))
+			statements = append(statements, jen.Id("pointer").Op("+=").Lit(consecutive).Comment(comment))
 		case Token.IncrMemCell:
-			statements = append(statements, jen.Id("memory").Index(jen.Id("pointer")).Op("++").Comment(string(source[*ptr])))
+			statements = append(statements, jen.Id("memory").Index(jen.Id("pointer")).Op("+=").Lit(consecutive).Comment(comment))
 		case Token.DecrMemCell:
-			statements = append(statements, jen.Id("memory").Index(jen.Id("pointer")).Op("--").Comment(string(source[*ptr])))
+			statements = append(statements, jen.Id("memory").Index(jen.Id("pointer")).Op("-=").Lit(consecutive).Comment(comment))
 		case Token.OutputMemCell:
-			statements = append(statements, jen.Qual("fmt", "Printf").Call(jen.Lit("%c"), jen.Id("memory").Index(jen.Id("pointer"))).Comment(string(source[*ptr])))
+			statements = append(statements, jen.Qual("fmt", "Printf").Call(jen.Lit("%c"), jen.Id("memory").Index(jen.Id("pointer"))).Comment(comment))
 		case Token.InputMemCell:
-			statements = append(statements, jen.Id("reader").Op("=").Qual("bufio", "NewReader").Call(jen.Qual("os", "Stdin")).Comment(string(source[*ptr])))
+			statements = append(statements, jen.Id("reader").Op("=").Qual("bufio", "NewReader").Call(jen.Qual("os", "Stdin")).Comment(comment))
 			statements = append(statements, jen.List(jen.Id("c"), jen.Id("_"), jen.Id("err").Op("=").Id("reader").Dot("ReadRune").Call()))
 			statements = append(statements, jen.If(jen.Id("err").Op("!=").Nil().Block(
 				jen.Panic(jen.Id("err")),
@@ -109,7 +122,7 @@ loop:
 			statements = append(statements, jen.Id("memory").Index(jen.Id("pointer")).Op("=").Int().Parens(jen.Id("c")))
 		case Token.BracketOpen:
 			*ptr++
-			statements = append(statements, jen.For((jen.Id("memory").Index(jen.Id("pointer")).Op("!=").Lit(0)).Block(translateBFRec(source, ptr)...).Comment("]")))
+			statements = append(statements, jen.For((jen.Id("memory").Index(jen.Id("pointer")).Op("!=").Lit(0)).Block(translateBFRec(source, ptr)...).Comment(comment)))
 		case Token.BracketClose:
 			break loop
 		}
