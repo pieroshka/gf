@@ -1,0 +1,24 @@
+version: "3.0"
+
+tasks:
+  with-wasm:
+    internal: true
+    cmds:
+      - go run cmd/gf/main.go -in bf/hello_world.bf
+      - tinygo build -o out/main.wasm -target=wasi out/main.go
+      - wazero run out/main.wasm
+
+  no-wasm:
+    internal: true
+    cmds:
+      - go run cmd/gf/main.go -in bf/hello_world.bf
+      - go build -o out/main out/main.go
+      - ./out/main
+
+  wasm:
+    cmds:
+      - task: with-wasm
+
+  default:
+    cmds:
+      - task: no-wasm
