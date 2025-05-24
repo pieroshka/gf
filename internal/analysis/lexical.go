@@ -6,17 +6,18 @@ import (
 	"github.com/pieroshka/gf/internal/token"
 )
 
-type Lexical struct{}
+type lexical struct{}
 
-func NewLexical() *Lexical {
-	return &Lexical{}
+func NewLexical() *lexical {
+	return &lexical{}
 }
 
 func isToken(b byte) bool {
 	return slices.Contains(token.Tokens, b)
 }
-func (l Lexical) Run(source []byte) []byte {
-	var out []byte
+
+func (l lexical) Run(source []byte) []byte {
+	out := []byte{}
 	for i := range source {
 		if isToken(source[i]) {
 			out = append(out, source[i])

@@ -10,13 +10,13 @@ import (
 	"github.com/pieroshka/gf/internal/token"
 )
 
-type Compiler struct{}
+type compiler struct{}
 
-func New() *Compiler {
-	return &Compiler{}
+func New() *compiler {
+	return &compiler{}
 }
 
-func (c Compiler) Run(source []byte, outPath string) error {
+func (c compiler) Run(source []byte, outPath string) error {
 	f := jen.NewFile("main")
 	statements := []jen.Code{
 		jen.Id("memory").Op(":=").Make(jen.Index().Int(), jen.Lit(30000)),

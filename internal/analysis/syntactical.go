@@ -11,13 +11,13 @@ var (
 	ErrClosingBracketNotFound   = errors.New("closing bracket not found")
 )
 
-type Syntactical struct{}
+type syntactical struct{}
 
-func NewSyntactical() *Syntactical {
-	return &Syntactical{}
+func NewSyntactical() *syntactical {
+	return &syntactical{}
 }
 
-func (s Syntactical) Run(source []byte) (int, bool, error) {
+func (s syntactical) Run(source []byte) (int, bool, error) {
 	var stack []byte
 	var openingBracketIdx []int
 
@@ -41,7 +41,7 @@ func (s Syntactical) Run(source []byte) (int, bool, error) {
 	var err error
 	if len(stack) != 0 {
 		err = ErrClosingBracketNotFound
-		errIdx = openingBracketIdx[0]
+		errIdx = openingBracketIdx[len(openingBracketIdx)-1]
 	}
 
 	return errIdx, len(stack) == 0, err
