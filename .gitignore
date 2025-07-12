@@ -1,2 +1,13 @@
-go.mod
-input.bf
+out/
+.vscode/
+.DS_Store
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+.idea/
+*.swp
+*.swo
+*~
